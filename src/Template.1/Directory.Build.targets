@@ -1,9 +1,9 @@
 ﻿<Project ToolsVersion="15.0">
 
-  <Target Name="ComposeContent" Outputs="%(TemplatePack.Identity)" BeforeTargets="Build">
+  <Target Name="ComposeContent" Outputs="%(TemplatePack.Identity)" BeforeTargets="UpdateClean">
     <PropertyGroup>
       <PackName>$([System.IO.Path]::GetFilename(%(TemplatePack.Identity)))</PackName>
-      <BasePath>$(BaseIntermediateOutputPath)TemplateContent\</BasePath>
+      <BasePath>$(IntermediateOutputPath)TemplateContent\</BasePath>
       <PackBasePath>$(BasePath)$(PackName)\</PackBasePath>
       <ContentPath>$(PackBasePath)content\</ContentPath>
       <ChildProjectFileContents>
@@ -56,7 +56,10 @@
 ]]>
       </NuSpecContents>
     </PropertyGroup>
-    
+
+    <Message Importance="High" Text="Cleaning up from previous run" Condition="Exists('$(PackBasePath)')" />
+    <RemoveDir Directories="$(PackBasePath)" Condition="Exists('$(PackBasePath)')" />
+
     <Message Importance="High" Text="Building %(Template.Pack).nupkg..." />
     <MakeDir Directories="$(PackBasePath)" />
     <MakeDir Directories="$(ContentPath)$([System.IO.Path]::GetFilename(%(Template.FullPath)))" Condition="'%(Template.Pack)' == '$(PackName)'" />
@@ -78,7 +81,14 @@
 
     <MakeDir Directories="$(OutDir)" />
     <Copy SourceFiles="@(OutputPackages)" DestinationFiles="$(OutDir)%(FileName).nupkg" />
-    <RemoveDir Directories="$(BasePath)" Condition="'$(PreserveTemplateInObj)' != 'true'" />
+  </Target>
+
+  <Target Name="UpdateClean" BeforeTargets="Build">
+    <ItemGroup>
+      <_AllTemplateFiles Include="$(IntermediateOutputPath)\TemplateContent\**" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(IntermediateOutputPath)$(CleanFile)" Lines="%(_AllTemplateFiles.FullPath)" />
   </Target>
   
 </Project>
