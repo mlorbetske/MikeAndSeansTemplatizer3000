@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json.schemastore.org/vs-2017.3.host",
+  "name": {
+    "text": "Template Build Project"
+  },
+  "description": {
+    "text": "An project that can be used to produce artifacts for carrying one or more templates."
+  },
+  "order": 100,
+  "icon": "vs-2017.3/Empty.png",
+  "learnMoreLink": "https://bing.com",
+  "uiFilters": [ "none" ],
+  "minFullFrameworkVersion": "4.6.1"
+}

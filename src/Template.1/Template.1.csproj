@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Template._1</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(ContentProductionMode)' != 'true'">
+    <Content Include=".template.config\template.json" />
+    <Content Include=".template.config\vs-2017.3.host.json" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Template Include="..\Hi" Pack="Test.Package.1" TemplateJson="HiTemplate.json" />
+    <TemplatePack Include="Test.Package.1" Author="TestAuthor" Version="1.0.0" Description="Demo template pack" />
+  </ItemGroup>
+  
+</Project>

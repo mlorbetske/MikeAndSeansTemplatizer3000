@@ -1,0 +1,84 @@
+﻿<Project ToolsVersion="15.0">
+
+  <Target Name="ComposeContent" Outputs="%(TemplatePack.Identity)" BeforeTargets="Build">
+    <PropertyGroup>
+      <PackName>$([System.IO.Path]::GetFilename(%(TemplatePack.Identity)))</PackName>
+      <BasePath>$(BaseIntermediateOutputPath)TemplateContent\</BasePath>
+      <PackBasePath>$(BasePath)$(PackName)\</PackBasePath>
+      <ContentPath>$(PackBasePath)content\</ContentPath>
+      <ChildProjectFileContents>
+        <![CDATA[<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard1.0</TargetFramework>
+    <NuspecFile>%24(MSBuildThisFileDirectory)\Template.nuspec</NuspecFile>
+    <NuspecProperties>version=$(PackageVersion)</NuspecProperties>
+    <IncludeBuildOutput>False</IncludeBuildOutput>
+    <IncludeSource>False</IncludeSource>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
+    <EnableDefaultItems>False</EnableDefaultItems>
+    <NoWarn>2008%3B8021</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Remove="Microsoft.NETCore.App" />
+  </ItemGroup>
+  <Target Name="CreateManifestResourceNames" />
+  <Target Name="CoreCompile" />
+</Project>
+]]>
+      </ChildProjectFileContents>
+      <LicenseUrlElement Condition="'%(TemplatePack.LicenseUrl)' != ''">
+        <![CDATA[
+    <licenseUrl>%(TemplatePack.LicenseUrl)</licenseUrl>]]>
+      </LicenseUrlElement>
+      <ProjectUrlElement Condition="'%(TemplatePack.ProjectUrl)' != ''">
+        <![CDATA[
+    <projectUrl>%(TemplatePack.ProjectUrl)</projectUrl>]]>
+      </ProjectUrlElement>
+      <NuSpecContents>
+        <![CDATA[<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>$(PackName)</id>
+    <version>%(TemplatePack.Version)</version>
+    <authors>%(TemplatePack.Author)</authors>
+    <description>%(TemplatePack.Description)</description>
+    <language>en-US</language>
+    $(ProjectUrlElement)$(LicenseUrlElement)
+    <packageTypes>
+      <packageType name="Template" />
+    </packageTypes>
+  </metadata>
+  <files>
+    <file src="content/**" target="" />
+  </files>
+</package>
+]]>
+      </NuSpecContents>
+    </PropertyGroup>
+    
+    <Message Importance="High" Text="Building %(Template.Pack).nupkg..." />
+    <MakeDir Directories="$(PackBasePath)" />
+    <MakeDir Directories="$(ContentPath)$([System.IO.Path]::GetFilename(%(Template.FullPath)))" Condition="'%(Template.Pack)' == '$(PackName)'" />
+
+    <WriteLinesToFile File="$(PackBasePath)\Template.proj" Lines="$(ChildProjectFileContents)" Overwrite="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="$(PackBasePath)\Template.nuspec" Lines="$(NuSpecContents)" Overwrite="true" Encoding="UTF-8" />
+
+    <ItemGroup>
+      <TemplateSourceFile Include="%(Template.FullPath)\**" Exclude="%(Template.FullPath)\**\bin\**;%(Template.FullPath)\**\obj\**;%(Template.ExcludeFiles)" Destination="$(ContentPath)$([System.IO.Path]::GetFilename(%(Template.FullPath)))" />
+    </ItemGroup>
+
+    <Copy SourceFiles="%(TemplateSourceFile.FullPath)" DestinationFolder="%(TemplateSourceFile.Destination)\%(TemplateSourceFile.RecursiveDir)" />
+    <Copy SourceFiles="%(Template.TemplateJson)" DestinationFiles="$(ContentPath)$([System.IO.Path]::GetFilename(%(Template.FullPath)))\.template.config\template.json" />
+    <MsBuild Projects="$(PackBasePath)\Template.proj" Targets="Restore;Pack" />
+
+    <ItemGroup>
+      <OutputPackages Include="$(PackBasePath)\bin\Debug\$(PackName).*.nupkg" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(OutDir)" />
+    <Copy SourceFiles="@(OutputPackages)" DestinationFiles="$(OutDir)%(FileName).nupkg" />
+    <RemoveDir Directories="$(BasePath)" Condition="'$(PreserveTemplateInObj)' != 'true'" />
+  </Target>
+  
+</Project>

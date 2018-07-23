@@ -1,0 +1,15 @@
+﻿<Project ToolsVersion="15.0">
+
+  <PropertyGroup>
+    <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
+    <SkipCopyingSymbolsToOutputDirectory>true</SkipCopyingSymbolsToOutputDirectory>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <NoWarn>2008;8021</NoWarn>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="**\*.json" Exclude="$(DefaultItemExcludes)" />
+  </ItemGroup>
+    
+</Project>

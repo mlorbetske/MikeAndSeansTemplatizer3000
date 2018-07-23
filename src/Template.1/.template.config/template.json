@@ -1,0 +1,16 @@
+{
+  "author": "Mike Lorbetske and Sean Peters",
+  "classifications": [ "template" ],
+  "identity": "Templatizer3000.TemplateBuildProject",
+  "name": "Templatizer 3000 Template Build Project",
+  "shortName": "tmpltproj",
+  "symbols": {
+    "ContentProductionMode": {
+      "type": "generated",
+      "generator": "constant",
+      "parameters": {
+        "value": "false"
+      }
+    }
+  }
+}
