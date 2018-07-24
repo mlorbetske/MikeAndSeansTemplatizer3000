@@ -1,6 +1,6 @@
-﻿<Project ToolsVersion="15.0">
+﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(IsGeneratedBuild)' != 'true'">
     <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
     <SkipCopyingSymbolsToOutputDirectory>true</SkipCopyingSymbolsToOutputDirectory>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
@@ -8,8 +8,11 @@
     <EnableDefaultItems>false</EnableDefaultItems>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(IsGeneratedBuild)' != 'true'">
     <None Include="**\*.json" Exclude="$(DefaultItemExcludes)" />
+    <PackageReference Include="RoslynCodeTaskFactory">
+      <Version>2.0.7</Version>
+    </PackageReference>
   </ItemGroup>
-    
+
 </Project>

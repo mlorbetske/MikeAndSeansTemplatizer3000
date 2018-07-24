@@ -1,8 +1,72 @@
-﻿<Project ToolsVersion="15.0">
+﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  
+  <UsingTask
+    TaskName="ProduceVstman"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(RoslynCodeTaskFactory)"
+    Condition=" '$(RoslynCodeTaskFactory)' != '' ">
+    <ParameterGroup>
+      <TemplateEntries ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <TemplateKind ParameterType="System.String" Required="true" />
+      <TemplateBaseDirectory ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.Collections.Generic" />
+      <Code Type="Fragment" Language="C#">
+        <![CDATA[
+        Dictionary<string, List<string>> templateManifestEntriesByLanguage = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (ITaskItem item in TemplateEntries)
+        {
+          string language = item.GetMetadata("TemplateLanguage");
+          Log.LogMessageFromText("Working on a " + language + " template...", MessageImportance.High);
+          string relativePathOnDisk = language + "\\" + item.GetMetadata("SelectionTreePath") + "\\" + item.ItemSpec;
+          string templateContainer = $@"  <VSTemplateContainer TemplateType=""{TemplateKind}"">
+    <RelativePathOnDisk>{relativePathOnDisk}</RelativePathOnDisk>
+    <TemplateFileName>template.vstemplate</TemplateFileName>
+    <VSTemplateHeader>
+      <TemplateData xmlns=""http://schemas.microsoft.com/developer/vstemplate/2005"">
+        <Name>{item.GetMetadata("Name")}</Name>
+        <Description>{item.GetMetadata("Description")}</Description>
+        <TemplateID>{item.ItemSpec}</TemplateID>
+        <DefaultName>{item.GetMetadata("DefaultName")}</DefaultName>
+        <Icon>{item.GetMetadata("Icon")}</Icon>
+        <ProjectType>{language}</ProjectType>
+        <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+        <SortOrder>5000</SortOrder>
+        <CreateNewFolder>true</CreateNewFolder>
+        <ProvideDefaultName>true</ProvideDefaultName>
+        <LocationField>Enabled</LocationField>
+        <EnableLocationBrowseButton>true</EnableLocationBrowseButton>
+      </TemplateData>
+    </VSTemplateHeader>
+  </VSTemplateContainer>";
+          if (!templateManifestEntriesByLanguage.TryGetValue(language, out List<string> entries))
+          {
+            templateManifestEntriesByLanguage[language] = entries = new List<string>();
+          }
+          
+          entries.Add(templateContainer);
+        }
+        
+        foreach (KeyValuePair<string, List<string>> entry in templateManifestEntriesByLanguage)
+        {
+          string templateContainers = string.Join(Environment.NewLine, entry.Value);
+          
+          string fullPath = Path.Combine(TemplateBaseDirectory, entry.Key, "templateManifest0.locloc.vstman");
+          File.WriteAllText(fullPath, string.Format(@"<VSTemplateManifest Version=""1.0"" xmlns=""http://schemas.microsoft.com/developer/vstemplatemanifest/2015"">
+{0}
+</VSTemplateManifest>", templateContainers));
+        }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
 
-  <Target Name="ComposeContent" Outputs="%(TemplatePack.Identity)" BeforeTargets="UpdateClean">
+  
+  <Target Name="ComposeContent" Outputs="%(TemplatePack.Identity)" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
     <PropertyGroup>
-      <PackName>$([System.IO.Path]::GetFilename(%(TemplatePack.Identity)))</PackName>
+      <PackName>%(TemplatePack.Identity)</PackName>
       <BasePath>$(IntermediateOutputPath)TemplateContent\</BasePath>
       <PackBasePath>$(BasePath)$(PackName)\</PackBasePath>
       <ContentPath>$(PackBasePath)content\</ContentPath>
@@ -60,20 +124,20 @@
     <Message Importance="High" Text="Cleaning up from previous run" Condition="Exists('$(PackBasePath)')" />
     <RemoveDir Directories="$(PackBasePath)" Condition="Exists('$(PackBasePath)')" />
 
-    <Message Importance="High" Text="Building %(Template.Pack).nupkg..." />
+    <Message Importance="High" Text="Building %(TemplatePack.Identity).%(TemplatePack.Version).nupkg..." />
     <MakeDir Directories="$(PackBasePath)" />
-    <MakeDir Directories="$(ContentPath)$([System.IO.Path]::GetFilename(%(Template.FullPath)))" Condition="'%(Template.Pack)' == '$(PackName)'" />
+    <MakeDir Directories="$(ContentPath)%(Template.FileName))" Condition="'%(Template.Pack)' == '$(PackName)'" />
 
     <WriteLinesToFile File="$(PackBasePath)\Template.proj" Lines="$(ChildProjectFileContents)" Overwrite="true" Encoding="UTF-8" />
     <WriteLinesToFile File="$(PackBasePath)\Template.nuspec" Lines="$(NuSpecContents)" Overwrite="true" Encoding="UTF-8" />
 
     <ItemGroup>
-      <TemplateSourceFile Include="%(Template.FullPath)\**" Exclude="%(Template.FullPath)\**\bin\**;%(Template.FullPath)\**\obj\**;%(Template.ExcludeFiles)" Destination="$(ContentPath)$([System.IO.Path]::GetFilename(%(Template.FullPath)))" />
+      <TemplateSourceFile Include="%(Template.FullPath)\**" Exclude="%(Template.FullPath)\**\bin\**;%(Template.FullPath)\**\obj\**;%(Template.ExcludeFiles)" Destination="$(ContentPath)%(Template.FileName)" />
     </ItemGroup>
 
     <Copy SourceFiles="%(TemplateSourceFile.FullPath)" DestinationFolder="%(TemplateSourceFile.Destination)\%(TemplateSourceFile.RecursiveDir)" />
-    <Copy SourceFiles="%(Template.TemplateJson)" DestinationFiles="$(ContentPath)$([System.IO.Path]::GetFilename(%(Template.FullPath)))\.template.config\template.json" />
-    <MsBuild Projects="$(PackBasePath)\Template.proj" Targets="Restore;Pack" />
+    <Copy SourceFiles="%(Template.TemplateJson)" DestinationFiles="$(ContentPath)%(Template.FileName)\.template.config\template.json" />
+    <MsBuild Projects="$(PackBasePath)\Template.proj" Targets="Restore;Pack" Properties="IsGeneratedBuild=true" />
 
     <ItemGroup>
       <OutputPackages Include="$(PackBasePath)\bin\Debug\$(PackName).*.nupkg" />
@@ -83,12 +147,214 @@
     <Copy SourceFiles="@(OutputPackages)" DestinationFiles="$(OutDir)%(FileName).nupkg" />
   </Target>
 
-  <Target Name="UpdateClean" BeforeTargets="Build">
+  <Target Name="UpdateClean" BeforeTargets="Build" Condition="'$(IsGeneratedBuild)' != 'true'">
     <ItemGroup>
       <_AllTemplateFiles Include="$(IntermediateOutputPath)\TemplateContent\**" />
+      <_AllTemplateFiles Include="$(IntermediateOutputPath)\VsixBuild2\**" />
+      <_AllTemplateFiles Include="$(IntermediateOutputPath)\VsixBuildProjectTemp\**" />
+      <_AllTemplateFiles Include="$(IntermediateOutputPath)\VsixBuildItemTemp\**" />
     </ItemGroup>
 
     <WriteLinesToFile File="$(IntermediateOutputPath)$(CleanFile)" Lines="%(_AllTemplateFiles.FullPath)" />
+  </Target>
+
+  <Target Name="PrepareForVsixBuild" AfterTargets="ComposeContent" BeforeTargets="UpdateClean">
+    <PropertyGroup>
+      <VsixExtensionId>$(VsixExtensionId.ToLower())</VsixExtensionId>
+      <VsixName Condition="'$(VsixName)' == ''">$(MSBuildProjectName)</VsixName>
+      <VsVersionRange Condition="'$(VsVersionRange)' == ''">[15.0.26730.3,16.0)</VsVersionRange>
+      <PkgDefFile>
+        <![CDATA[[$RootKey$\TemplateEngine\Templates\$(VsixExtensionId)]
+"InstalledPath"="$PackageFolder$\TemplateContent"]]>
+      </PkgDefFile>
+    </PropertyGroup>
+
+    <RemoveDir Directories="$(IntermediateOutputPath)\VsixBuild2" Condition="Exists('$(IntermediateOutputPath)VsixBuild2')" />
+    <MakeDir Directories="$(IntermediateOutputPath)VsixBuild2\TemplateContent" />
+
+    <!-- Copy Core Files-->
+    <Copy SourceFiles="$(Icon)" Condition="Exists('$(Icon)')" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\" />
+    <Copy SourceFiles="$(PreviewImage)" Condition="Exists('$(PreviewImage)') AND '$(Previewimage)' != '$(Icon)'" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\" />
+    <Copy SourceFiles="$(License)" Condition="Exists('$(License)')" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)VsixBuild2\extension.pkgdef" Lines="$(PkgDefFile)" />
+
+    <!-- Copy Template Packs -->
+    <Copy SourceFiles="@(OutputPackages)" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\TemplateContent" />
+  </Target>
+
+  <Target Name="ProduceProjectTemplateArtifacts" Outputs="%(ProjectTemplate.Identity)" AfterTargets="PrepareForVsixBuild" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <PropertyGroup>
+      <VsTemplateIcon Condition="'%(ProjectTemplate.Icon)' != ''">%(ProjectTemplate.Icon)</VsTemplateIcon>
+      <VsTemplateIcon Condition="'$(VsTemplateIcon)' == '' AND Exists('$(Icon)')">$(Icon)</VsTemplateIcon>
+      <VsTemplate>
+        <![CDATA[<VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="ProjectGroup">
+  <TemplateData>
+    <Name>%(ProjectTemplate.Name)</Name>
+    <Description>%(ProjectTemplate.Description)</Description>
+    <TemplateID>%(ProjectTemplate.Identity)</TemplateID>
+    <DefaultName>%(ProjectTemplate.DefaultName)</DefaultName>
+    
+    <Icon>$(VsTemplateIcon)</Icon>
+    
+    <ProjectType>%(ProjectTemplate.TemplateLanguage)</ProjectType>
+    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <SortOrder>5000</SortOrder>
+    <CreateNewFolder>true</CreateNewFolder>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <LocationField>Enabled</LocationField>
+    <EnableLocationBrowseButton>true</EnableLocationBrowseButton>
+  </TemplateData>
+  <TemplateContent>
+    <ProjectCollection/>
+    <CustomParameters>
+      <CustomParameter Name="$language$" Value="%(ProjectTemplate.TemplateLanguage)" />
+      <CustomParameter Name="$uistyle$" Value="none"/>
+      <CustomParameter Name="$templateid$" Value="%(ProjectTemplate.Identity)" />
+    </CustomParameters>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>Microsoft.VisualStudio.TemplateEngine.Wizard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</Assembly>
+    <FullClassName>Microsoft.VisualStudio.TemplateEngine.Wizard.TemplateEngineWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>
+]]>
+      </VsTemplate>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)\template.vstemplate" Lines="$(VsTemplate)" />
+    <Copy SourceFiles="$(VsTemplateIcon)" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)" Condition="Exists('$(VsTemplateIcon)')"/>
+    <ItemGroup>
+      <TemplateReference Include="%20%20%20%20&lt;Asset Type=&quot;Microsoft.VisualStudio.ProjectTemplate&quot; Path=&quot;ProjectTemplates&quot; /&gt;" BaseDirectory="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\" />
+      <VsixItem Include="%20%20%20%20&lt;Content Include=&quot;ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)\*&quot;&gt;&lt;CopyToOutputDirectory&gt;Always&lt;/CopyToOutputDirectory&gt;&lt;IncludeInVSIX&gt;true&lt;/IncludeInVSIX&gt;&lt;/Content&gt;" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="ProduceItemTemplateArtifacts" Outputs="%(ItemTemplate.Identity)" AfterTargets="PrepareForVsixBuild" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
+
+  </Target>
+
+  <Target Name="ProduceVsixManifest" AfterTargets="ProduceProjectTemplateArtifacts;ProduceItemTemplateArtifacts" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <PropertyGroup>
+      <VsixManifestMoreInfo Condition="'$(ProjectUrl)' != ''">
+        <![CDATA[
+      <MoreInfo>$(ProjectUrl)</MoreInfo>]]>
+      </VsixManifestMoreInfo>
+      <VsixManifestLicense Condition="Exists('$(License)')">
+        <![CDATA[
+      <License>$(License)</License>]]>
+      </VsixManifestLicense>
+      <PreviewImage Condition="'$(PreviewImage)' == '' AND Exists('$(Icon)')">$(Icon)</PreviewImage>
+      <VsixManifestIcon Condition="Exists('$(Icon)')">
+        <![CDATA[
+      <Icon>$(Icon)</Icon>]]>
+      </VsixManifestIcon>
+      <VsixManifestPreviewImage Condition="Exists('$(PreviewImage)')">
+        <![CDATA[
+      <PreviewImage>$(PreviewImage)</PreviewImage>]]>
+      </VsixManifestPreviewImage>
+      <VsixManifest>
+        <![CDATA[<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Id="$(VsixExtensionId)" Version="$(ExtensionVersion)" Language="en-US" Publisher="$(Author)" />
+    <DisplayName>$(ExtensionTitle)</DisplayName>
+    <Description xml:space="preserve">$(ExtensionDescription)</Description>$(VsixManifestProjectUrl)$(VsixManifestLicense)$(VsixManifestIcon)$(VsixManifestPreviewImage)
+    <Tags>$(Tags)</Tags>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="$(VsVersionRange)" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" Version="[4.5,)" />
+  </Dependencies>
+  <Prerequisites>
+    <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0,16.0)" DisplayName="Visual Studio core editor" />
+  </Prerequisites>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.VsPackage" Path="extension.pkgdef" />
+@(TemplateReference->Distinct())
+  </Assets>
+</PackageManifest>]]>
+      </VsixManifest>
+<!-- Add @(TemplateReference) back inside Assets-->
+    </PropertyGroup>
+    <ProduceVstman TemplateEntries="@(ProjectTemplate)" TemplateKind="ProjectGroup" TemplateBaseDirectory="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)\VsixBuild2\Source.extension.vsixmanifest" Lines="$(VsixManifest)" />
+  </Target>
+
+  <Target Name="CallBuildOnVsixProject" AfterTargets="GenerateVsixProject" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <Message Importance="High" Text="Building VSIX project: $(IntermediateOutputPath)VsixBuild2\$(MSBuildProjectName).csproj..." />
+    <MSBuild Projects="$(IntermediateOutputPath)VsixBuild2\$(MSBuildProjectName).csproj" Targets="Build" Properties="IsGeneratedBuild=true;VisualStudioVersion=15.0;DeployExtension=false;Configuration=$(Configuration)" />
+    <MakeDir Directories="$(OutDir)" />
+    <Copy SourceFiles="$(IntermediateOutputPath)VsixBuild2\bin\$(Configuration)\$(MSBuildProjectName).vsix" DestinationFolder="$(OutDir)" />
+  </Target>
+
+  <Target Name="GenerateVsixProject" AfterTargets="ProduceVsixManifest" BeforeTargets="CallBuildOnVsixProject" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <PropertyGroup>
+      <_VsixCsprojContents>
+        <![CDATA[<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
+    <VSToolsPath Condition="'%24(VSToolsPath)' == ''">%24(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v%24(VisualStudioVersion)</VSToolsPath>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <Import Project="%24(MSBuildExtensionsPath)\%24(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('%24(MSBuildExtensionsPath)\%24(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '%24(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '%24(Platform)' == '' ">AnyCPU</Platform>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectTypeGuids>{82b43b9b-a64c-4715-b499-d71e9ca2bd60}%3B{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <ProjectGuid>{20F5047E-32A2-417E-93A0-E2C1EAE453D3}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <GeneratePkgDefFile>false</GeneratePkgDefFile>
+    <IncludeAssemblyInVSIXContainer>false</IncludeAssemblyInVSIXContainer>
+    <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>
+    <IncludeDebugSymbolsInLocalVSIXDeployment>false</IncludeDebugSymbolsInLocalVSIXDeployment>
+    <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
+    <CopyOutputSymbolsToOutputDirectory>false</CopyOutputSymbolsToOutputDirectory>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '%24(Configuration)|%24(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG%3BTRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '%24(Configuration)|%24(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="extension.pkgdef">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+@(VsixItem)
+    <Content Include="TemplateContent\*.nupkg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <None Include="Source.extension.vsixmanifest">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <Import Project="%24(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="%24(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'%24(VSToolsPath)' != ''" />
+</Project>]]></_VsixCsprojContents>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)VsixBuild2\$(MSBuildProjectName).csproj" Lines="$(_VsixCsprojContents)" />
   </Target>
   
 </Project>
