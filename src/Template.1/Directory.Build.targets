@@ -53,7 +53,7 @@
         {
           string templateContainers = string.Join(Environment.NewLine, entry.Value);
           
-          string fullPath = Path.Combine(TemplateBaseDirectory, entry.Key, "templateManifest0.locloc.vstman");
+          string fullPath = Path.Combine(TemplateBaseDirectory, entry.Key, "templateManifest0.noloc.vstman");
           File.WriteAllText(fullPath, string.Format(@"<VSTemplateManifest Version=""1.0"" xmlns=""http://schemas.microsoft.com/developer/vstemplatemanifest/2015"">
 {0}
 </VSTemplateManifest>", templateContainers));

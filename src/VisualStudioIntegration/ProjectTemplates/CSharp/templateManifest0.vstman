@@ -1,0 +1,22 @@
+﻿<VSTemplateManifest Version="1.0" xmlns="http://schemas.microsoft.com/developer/vstemplatemanifest/2015">
+  <VSTemplateContainer TemplateType="ProjectGroup">
+    <RelativePathOnDisk>CSharp\Extensibility\</RelativePathOnDisk>
+    <TemplateFileName>template.vstemplate</TemplateFileName>
+    <VSTemplateHeader>
+      <TemplateData xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+        <Name>Runnable Project Generator Template Pack</Name>
+        <Description>A template usable in Visual Studio, Visual Studio for mac and the dotnet CLI</Description>
+        <TemplateID>Templatizer3000.TemplateBuildProject</TemplateID>
+        <DefaultName>TemplatePack</DefaultName>
+        <Icon>DefaultIcon.ico</Icon>
+        <ProjectType>CSharp</ProjectType>
+        <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+        <SortOrder>5000</SortOrder>
+        <CreateNewFolder>true</CreateNewFolder>
+        <ProvideDefaultName>true</ProvideDefaultName>
+        <LocationField>Enabled</LocationField>
+        <EnableLocationBrowseButton>true</EnableLocationBrowseButton>
+      </TemplateData>
+    </VSTemplateHeader>
+  </VSTemplateContainer>
+</VSTemplateManifest>

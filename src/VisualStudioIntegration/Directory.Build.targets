@@ -1,0 +1,100 @@
+﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ComposeContent" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <PropertyGroup>
+      <PackName>MikeAndSeansTemplatizer3000</PackName>
+      <PackVersion>1.0.0</PackVersion>
+      <PackAuthor>Mike and Sean</PackAuthor>
+      <BasePath>$(IntermediateOutputPath)TemplateContent\</BasePath>
+      <PackBasePath>$(BasePath)$(PackName)\</PackBasePath>
+      <ContentPath>$(PackBasePath)content\</ContentPath>
+      <ChildProjectFileContents>
+        <![CDATA[<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard1.0</TargetFramework>
+    <NuspecFile>%24(MSBuildThisFileDirectory)\Template.nuspec</NuspecFile>
+    <NuspecProperties>version=$(PackageVersion)</NuspecProperties>
+    <IncludeBuildOutput>False</IncludeBuildOutput>
+    <IncludeSource>False</IncludeSource>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
+    <EnableDefaultItems>False</EnableDefaultItems>
+    <NoWarn>2008%3B8021</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Remove="Microsoft.NETCore.App" />
+  </ItemGroup>
+  <Target Name="CreateManifestResourceNames" />
+  <Target Name="CoreCompile" />
+</Project>
+]]>
+      </ChildProjectFileContents>
+      <LicenseUrlElement Condition="'%(TemplatePack.LicenseUrl)' != ''">
+        <![CDATA[
+    <licenseUrl>%(TemplatePack.LicenseUrl)</licenseUrl>]]>
+      </LicenseUrlElement>
+      <ProjectUrlElement Condition="'%(TemplatePack.ProjectUrl)' != ''">
+        <![CDATA[
+    <projectUrl>%(TemplatePack.ProjectUrl)</projectUrl>]]>
+      </ProjectUrlElement>
+      <NuSpecContents>
+        <![CDATA[<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>$(PackName)</id>
+    <version>$(PackVersion)</version>
+    <authors>$(PackAuthor)</authors>
+    <description>A template for creating all common template artifacts</description>
+    <language>en-US</language>
+    $(ProjectUrlElement)$(LicenseUrlElement)
+    <packageTypes>
+      <packageType name="Template" />
+    </packageTypes>
+  </metadata>
+  <files>
+    <file src="content/**" target="" />
+  </files>
+</package>
+]]>
+      </NuSpecContents>
+    </PropertyGroup>
+
+    <Message Importance="High" Text="Cleaning up from previous run" Condition="Exists('$(PackBasePath)')" />
+    <RemoveDir Directories="$(PackBasePath)" Condition="Exists('$(PackBasePath)')" />
+
+    <Message Importance="High" Text="Building MikeAndSeansTemplatizer3000.1.0.0.nupkg..." />
+    <MakeDir Directories="$(PackBasePath)" />
+    <MakeDir Directories="$(ContentPath)Template.1" Condition="'%(Template.Pack)' == '$(PackName)'" />
+
+    <WriteLinesToFile File="$(PackBasePath)\Template.proj" Lines="$(ChildProjectFileContents)" Overwrite="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="$(PackBasePath)\Template.nuspec" Lines="$(NuSpecContents)" Overwrite="true" Encoding="UTF-8" />
+
+    <ItemGroup>
+      <TemplateSourceFile Include="..\Template.1\**" Exclude="..\Template.1\**\bin\**;..\Template.1\**\obj\**;..\Template.1\**\*.user" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(TemplateSourceFile)" DestinationFolder="$(ContentPath)Template.1\%(RecursiveDir)" />
+    <MsBuild Projects="$(PackBasePath)\Template.proj" Targets="Restore;Pack" Properties="IsGeneratedBuild=true" />
+
+    <ItemGroup>
+      <OutputPackages Include="$(PackBasePath)\bin\Debug\$(PackName).*.nupkg" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(OutDir)" />
+    <Copy SourceFiles="@(OutputPackages)" DestinationFiles="$(OutDir)%(FileName).nupkg" />
+  </Target>
+
+  <Target Name="UpdateClean" BeforeTargets="GetVsixSourceItems" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <ItemGroup>
+      <_AllTemplateFiles Include="$(IntermediateOutputPath)\TemplateContent\**" />
+      <Content Include="@(OutputPackages)">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <IncludeInVSIX>true</IncludeInVSIX>
+        <VSIXSubPath>TemplateContent</VSIXSubPath>
+      </Content>
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(IntermediateOutputPath)$(CleanFile)" Lines="%(_AllTemplateFiles.FullPath)" />
+  </Target>
+  
+</Project>

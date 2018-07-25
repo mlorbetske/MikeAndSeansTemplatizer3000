@@ -4,14 +4,16 @@
   "identity": "Templatizer3000.TemplateBuildProject",
   "name": "Templatizer 3000 Template Build Project",
   "shortName": "tmpltproj",
+  "sourceName": "Template.1",
   "guids": [ "3D13DAE1-0FA1-488D-96C7-B0979519C6DE" ],
   "symbols": {
     "ContentProductionMode": {
       "type": "generated",
       "generator": "constant",
       "parameters": {
-        "value": "false"
+        "value": "true"
       }
     }
-  }
+  },
+  "primaryOutputs": [ { "path": "Template.1.csproj" } ]
 }
