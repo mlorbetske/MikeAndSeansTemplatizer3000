@@ -9,23 +9,5 @@
     <Author>Demo</Author>
     <ExtensionVersion>1.0.1</ExtensionVersion>
   </PropertyGroup>
-
-  <ItemGroup Condition="'$(ContentProductionMode)' != 'true'">
-    <Content Include=".template.config\template.json" />
-    <Content Include=".template.config\vs-2017.3.host.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="DefaultIcon.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Template Include="..\Hi" Pack="Test.Package.1" TemplateJson="HiTemplate.json" />
-    <Template Include="..\Hi2" Pack="Test.Package.1" TemplateJson="HiTemplate - Copy.json" />
-    <TemplatePack Include="Test.Package.1" Author="TestAuthor" Version="1.0.0" Description="Demo template pack" />
-
-    <ProjectTemplate Include="Demo.Demo.Demo" TemplateLanguage="CSharp" SelectionTreePath="Web" Icon="DefaultIcon.ico" Name="Demo template 1" DefaultName="Demo1" />
-    <ProjectTemplate Include="Demo2.Demo2.Demo2" TemplateLanguage="CSharp" SelectionTreePath=".NET Standard" Icon="DefaultIcon.ico" Name="Demo template 2" DefaultName="Demo2" />
-  </ItemGroup>
   
 </Project>

@@ -5,11 +5,9 @@
     <SkipCopyingSymbolsToOutputDirectory>true</SkipCopyingSymbolsToOutputDirectory>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <NoWarn>2008;8021</NoWarn>
-    <EnableDefaultItems>false</EnableDefaultItems>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsGeneratedBuild)' != 'true'">
-    <None Include="**\*.json" Exclude="$(DefaultItemExcludes)" />
     <PackageReference Include="RoslynCodeTaskFactory">
       <Version>2.0.7</Version>
     </PackageReference>

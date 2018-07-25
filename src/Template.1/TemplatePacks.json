@@ -1,0 +1,103 @@
+﻿{
+  "$schema": {
+    "properties": {
+      "templates": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string"
+            },
+            "templateJson": {
+              "type": "string"
+            },
+            "pack": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "includeInVisualStudio": {
+              "type": "bool"
+            },
+            "isProject": {
+              "type": "bool"
+            },
+            "language": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "packs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "oneOf": [
+            {
+              "properties": {
+                "author": {
+                  "type": "string",
+                  "required": true
+                },
+                "version": {
+                  "type": "string",
+                  "required": true
+                },
+                "description": {
+                  "type": "string",
+                  "required": true
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    }
+  },
+  "packs": {
+    "Test.Package.1": {
+      "author": "TestAuthor",
+      "version": "1.0.0",
+      "description": "Demo template pack"
+    }
+  },
+  "templates": [
+    {
+      "templateId": "Demo.Demo.Demo",
+      "templateJson": "HiTemplate\\template.json",
+      "pack": "Test.Package.1",
+      "content": "..\\Hi",
+      "includeInVisualStudio": true,
+      "isProject": true,
+      "language": "CSharp",
+      "selectionTreePath": "Web",
+      "icon": "DefaultIcon.ico",
+      "displayName": "Demo Template 1",
+      "defaultName": "Demo1"
+    },
+    {
+      "templateId": "Demo2.Demo2.Demo2",
+      "templateJson": "HiTemplate\\template.json",
+      "pack": "Test.Package.1",
+      "content": "..\\Hi",
+      "includeInVisualStudio": true,
+      "isProject": true,
+      "language": "CSharp",
+      "selectionTreePath": ".NET Standard",
+      "icon": "DefaultIcon.ico",
+      "displayName": "Demo Template 2",
+      "defaultName": "Demo2"
+    }
+  ]
+}

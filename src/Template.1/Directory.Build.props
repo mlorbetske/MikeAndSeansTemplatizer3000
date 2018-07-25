@@ -5,13 +5,20 @@
     <SkipCopyingSymbolsToOutputDirectory>true</SkipCopyingSymbolsToOutputDirectory>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <NoWarn>2008;8021</NoWarn>
-    <EnableDefaultItems>false</EnableDefaultItems>
+    <DefaultItemExcludes>$(DefaultNoneExcludes);**\Directory.Build.*</DefaultItemExcludes>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="TemplatePacks.json" />
+    <TemplatePacksFile Include="TemplatePacks.json" Condition="Exists('TemplatePacks.json')" />
+  </ItemGroup>
+  
   <ItemGroup Condition="'$(IsGeneratedBuild)' != 'true'">
-    <None Include="**\*.json" Exclude="$(DefaultItemExcludes)" />
     <PackageReference Include="RoslynCodeTaskFactory">
       <Version>2.0.7</Version>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>11.0.2</Version>
     </PackageReference>
   </ItemGroup>
 

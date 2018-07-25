@@ -8,8 +8,11 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{6EF523E6-8785-4E1F-9E6F-9587FBBAEDEA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisualStudioIntegration", "src\VisualStudioIntegration\VisualStudioIntegration.csproj", "{7D1017E9-DF58-4D8B-A57A-708B6C53A4DD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9DA5368C-4CC4-4088-8F98-E1A1549D0B59} = {9DA5368C-4CC4-4088-8F98-E1A1549D0B59}
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.1", "src\Template.1\Template.1.csproj", "{9DA5368C-4CC4-4088-8F98-E1A1549D0B59}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Template.1", "src\Template.1\Template.1.csproj", "{9DA5368C-4CC4-4088-8F98-E1A1549D0B59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

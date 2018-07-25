@@ -1,4 +1,108 @@
 ﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <UsingTask
+    TaskName="DecodeTemplatePacks"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(RoslynCodeTaskFactory)"
+    Condition=" '$(RoslynCodeTaskFactory)' != '' ">
+    <ParameterGroup>
+      <TemplatePacksFilePath ParameterType="System.String" Required="true" />
+      <TemplatePacks ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(UserProfile)\.nuget\packages\newtonsoft.json\11.0.2\lib\netstandard2.0\Newtonsoft.Json.dll" />
+      <Using Namespace="System" />
+      <Using Namespace="System.Collections.Generic" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="Newtonsoft.Json.Linq" />
+      <Code Type="Fragment" Language="C#">
+        <![CDATA[
+          List<ITaskItem> items = new List<ITaskItem>();
+          string templatePacksJsonText = File.ReadAllText(TemplatePacksFilePath);
+          JObject templatePacksJson = JObject.Parse(templatePacksJsonText);
+          
+          if (templatePacksJson["packs"] is JObject packs)
+          {
+            foreach (JProperty property in packs.Properties())
+            {
+              TaskItem t = new TaskItem(property.Name);
+              t.SetMetadata("Author", property.Value["author"]?.ToString());
+              t.SetMetadata("Version", property.Value["version"]?.ToString());
+              t.SetMetadata("Description", property.Value["description"]?.ToString());
+              t.SetMetadata("Source", property.Value["source"]?.ToString());
+              items.Add(t);
+            }
+          }
+          
+          TemplatePacks = items.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+  
+  <UsingTask
+    TaskName="DecodeTemplateReferences"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(RoslynCodeTaskFactory)"
+    Condition=" '$(RoslynCodeTaskFactory)' != '' ">
+    <ParameterGroup>
+      <TemplatePacksFilePath ParameterType="System.String" Required="true" />
+      <Templates ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+      <ProjectTemplates ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+      <ItemTemplates ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(UserProfile)\.nuget\packages\newtonsoft.json\11.0.2\lib\netstandard2.0\Newtonsoft.Json.dll" />
+      <Using Namespace="System" />
+      <Using Namespace="System.Collections.Generic" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="Newtonsoft.Json.Linq" />
+      <Code Type="Fragment" Language="C#">
+        <![CDATA[
+          List<ITaskItem> templateItems = new List<ITaskItem>();
+          List<ITaskItem> projectTemplateItems = new List<ITaskItem>();
+          List<ITaskItem> itemTemplateItems = new List<ITaskItem>();
+          
+          string templatePacksJsonText = File.ReadAllText(TemplatePacksFilePath);
+          JObject templatePacksJson = JObject.Parse(templatePacksJsonText);
+          
+          if (templatePacksJson["templates"] is JArray packs)
+          {
+            foreach (JObject template in packs.OfType<JObject>())
+            {
+              TaskItem t = new TaskItem(template["content"].ToString());
+              t.SetMetadata("TemplateJson", template["templateJson"]?.ToString());
+              t.SetMetadata("Pack", template["pack"]?.ToString());
+              templateItems.Add(t);
+              
+              if (bool.TryParse(template["includeInVisualStudio"]?.ToString() ?? "false", out bool includeInVisualStudio) && includeInVisualStudio)
+              {
+                TaskItem vst = new TaskItem(template["templateId"].ToString());
+                vst.SetMetadata("TemplateLanguage", template["language"]?.ToString());
+                vst.SetMetadata("SelectionTreePath", template["selectionTreePath"].ToString());
+                vst.SetMetadata("Icon", template["icon"].ToString());
+                vst.SetMetadata("Name", template["displayName"].ToString());
+                vst.SetMetadata("DefaultName", template["defaultName"].ToString());
+                
+                if (bool.TryParse(template["isProject"]?.ToString() ?? "false", out bool isProject) && isProject)
+                {
+                  projectTemplateItems.Add(vst);
+                }
+                else
+                {
+                  itemTemplateItems.Add(vst);
+                }
+              }
+            }
+          }
+          
+          Templates = templateItems.ToArray();
+          ProjectTemplates = projectTemplateItems.ToArray();
+          ItemTemplates = itemTemplateItems.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
   
   <UsingTask
     TaskName="ProduceVstman"
@@ -63,19 +167,28 @@
     </Task>
   </UsingTask>
 
-  
-  <Target Name="ComposeContent" Outputs="%(TemplatePack.Identity)" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
+  <Target Name="DecodeConfiguration" BeforeTargets="ComposeContent" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <DecodeTemplatePacks TemplatePacksFilePath="@(TemplatePacksFile)">
+      <Output TaskParameter="TemplatePacks" ItemName="TemplatePack" />
+    </DecodeTemplatePacks>
+    
+    <DecodeTemplateReferences TemplatePacksFilePath="@(TemplatePacksFile)">
+      <Output TaskParameter="Templates" ItemName="Template" />
+      <Output TaskParameter="ProjectTemplates" ItemName="ProjectTemplate" />
+      <Output TaskParameter="ItemTemplates" ItemName="ItemTemplate" />
+    </DecodeTemplateReferences>
+  </Target>
+
+  <Target Name="ProduceTemplatePack" Outputs="%(TemplatePack.Identity)" BeforeTargets="CopyPacksToBin" AfterTargets="ComposeContent" Condition="'$(PackBasePath)' != '' AND '$(PackSource)' == ''">
+
     <PropertyGroup>
-      <PackName>%(TemplatePack.Identity)</PackName>
-      <BasePath>$(IntermediateOutputPath)TemplateContent\</BasePath>
-      <PackBasePath>$(BasePath)$(PackName)\</PackBasePath>
       <ContentPath>$(PackBasePath)content\</ContentPath>
       <ChildProjectFileContents>
         <![CDATA[<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard1.0</TargetFramework>
     <NuspecFile>%24(MSBuildThisFileDirectory)\Template.nuspec</NuspecFile>
-    <NuspecProperties>version=$(PackageVersion)</NuspecProperties>
+    <NuspecProperties>version=$(PackVersion)</NuspecProperties>
     <IncludeBuildOutput>False</IncludeBuildOutput>
     <IncludeSource>False</IncludeSource>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
@@ -91,22 +204,22 @@
 </Project>
 ]]>
       </ChildProjectFileContents>
-      <LicenseUrlElement Condition="'%(TemplatePack.LicenseUrl)' != ''">
+      <LicenseUrlElement Condition="'$(PackLicenseUrl)' != ''">
         <![CDATA[
-    <licenseUrl>%(TemplatePack.LicenseUrl)</licenseUrl>]]>
+    <licenseUrl>$(PackLicenseUrl)</licenseUrl>]]>
       </LicenseUrlElement>
-      <ProjectUrlElement Condition="'%(TemplatePack.ProjectUrl)' != ''">
+      <ProjectUrlElement Condition="'$(PackProjectUrl)' != ''">
         <![CDATA[
-    <projectUrl>%(TemplatePack.ProjectUrl)</projectUrl>]]>
+    <projectUrl>$(PackProjectUrl)</projectUrl>]]>
       </ProjectUrlElement>
       <NuSpecContents>
         <![CDATA[<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>$(PackName)</id>
-    <version>%(TemplatePack.Version)</version>
-    <authors>%(TemplatePack.Author)</authors>
-    <description>%(TemplatePack.Description)</description>
+    <version>$(PackVersion)</version>
+    <authors>$(PackAuthor)</authors>
+    <description>$(PackDescription)</description>
     <language>en-US</language>
     $(ProjectUrlElement)$(LicenseUrlElement)
     <packageTypes>
@@ -124,12 +237,12 @@
     <Message Importance="High" Text="Cleaning up from previous run" Condition="Exists('$(PackBasePath)')" />
     <RemoveDir Directories="$(PackBasePath)" Condition="Exists('$(PackBasePath)')" />
 
-    <Message Importance="High" Text="Building %(TemplatePack.Identity).%(TemplatePack.Version).nupkg..." />
+    <Message Importance="High" Text="Building $(PackName).$(PackVersion).nupkg..." />
     <MakeDir Directories="$(PackBasePath)" />
-    <MakeDir Directories="$(ContentPath)%(Template.FileName))" Condition="'%(Template.Pack)' == '$(PackName)'" />
+    <MakeDir Directories="$(ContentPath)%(Template.FileName)" Condition="'%(Template.Pack)' == '$(PackName)'" />
 
-    <WriteLinesToFile File="$(PackBasePath)\Template.proj" Lines="$(ChildProjectFileContents)" Overwrite="true" Encoding="UTF-8" />
-    <WriteLinesToFile File="$(PackBasePath)\Template.nuspec" Lines="$(NuSpecContents)" Overwrite="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="$(PackBasePath)Template.proj" Lines="$(ChildProjectFileContents)" Overwrite="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="$(PackBasePath)Template.nuspec" Lines="$(NuSpecContents)" Overwrite="true" Encoding="UTF-8" />
 
     <ItemGroup>
       <TemplateSourceFile Include="%(Template.FullPath)\**" Exclude="%(Template.FullPath)\**\bin\**;%(Template.FullPath)\**\obj\**;%(Template.ExcludeFiles)" Destination="$(ContentPath)%(Template.FileName)" />
@@ -137,7 +250,27 @@
 
     <Copy SourceFiles="%(TemplateSourceFile.FullPath)" DestinationFolder="%(TemplateSourceFile.Destination)\%(TemplateSourceFile.RecursiveDir)" />
     <Copy SourceFiles="%(Template.TemplateJson)" DestinationFiles="$(ContentPath)%(Template.FileName)\.template.config\template.json" />
-    <MsBuild Projects="$(PackBasePath)\Template.proj" Targets="Restore;Pack" Properties="IsGeneratedBuild=true" />
+    <MsBuild Projects="$(PackBasePath)Template.proj" Targets="Restore;Pack" Properties="IsGeneratedBuild=true" />
+  </Target>
+
+  <Target Name="ComposeContent" Outputs="%(TemplatePack.Identity)" BeforeTargets="UpdateClean" AfterTargets="DecodeConfiguration" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <PropertyGroup>
+      <PackName>%(TemplatePack.Identity)</PackName>
+      <PackAuthor>%(TemplatePack.Author)</PackAuthor>
+      <PackVersion>%(TemplatePack.Version)</PackVersion>
+      <PackDescription>%(TemplatePack.Description)</PackDescription>
+      <PackLicenseUrl>%(TemplatePack.LicenseUrl)</PackLicenseUrl>
+      <PackProjectUrl>%(TemplatePack.ProjectUrl)</PackProjectUrl>
+
+      <PackSource>%(TemplatePack.Source)</PackSource>
+
+      <BasePath>$(IntermediateOutputPath)TemplateContent\</BasePath>
+      <PackBasePath>$(BasePath)$(PackName)\</PackBasePath>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="CopyPacksToBin" Outputs="%(TemplatePack.Identity)" BeforeTargets="UpdateClean" AfterTargets="DecodeConfiguration" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <Copy SourceFiles="%(TemplatePack.Source)" DestinationFolder="$(PackBasePath)bin\Debug\" Condition="'%(TemplatePack.Source)' != ''" />
 
     <ItemGroup>
       <OutputPackages Include="$(PackBasePath)\bin\Debug\$(PackName).*.nupkg" />
@@ -219,19 +352,65 @@
 </VSTemplate>
 ]]>
       </VsTemplate>
+      <DisplayName>%(ProjectTemplate.Name)</DisplayName>
     </PropertyGroup>
 
-    <MakeDir Directories="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)" />
-    <WriteLinesToFile File="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)\template.vstemplate" Lines="$(VsTemplate)" />
-    <Copy SourceFiles="$(VsTemplateIcon)" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)" Condition="Exists('$(VsTemplateIcon)')"/>
-    <ItemGroup>
+    <MakeDir Condition="'$(DisplayName)' != ''" Directories="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)" />
+    <WriteLinesToFile Condition="'$(DisplayName)' != ''" File="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)\template.vstemplate" Lines="$(VsTemplate)" />
+    <Copy Condition="'$(DisplayName)' != '' AND Exists('$(VsTemplateIcon)')" SourceFiles="$(VsTemplateIcon)" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)"/>
+    <ItemGroup Condition="'$(DisplayName)' != ''">
       <TemplateReference Include="%20%20%20%20&lt;Asset Type=&quot;Microsoft.VisualStudio.ProjectTemplate&quot; Path=&quot;ProjectTemplates&quot; /&gt;" BaseDirectory="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\" />
       <VsixItem Include="%20%20%20%20&lt;Content Include=&quot;ProjectTemplates\%(ProjectTemplate.TemplateLanguage)\%(ProjectTemplate.SelectionTreePath)\%(ProjectTemplate.Identity)\*&quot;&gt;&lt;CopyToOutputDirectory&gt;Always&lt;/CopyToOutputDirectory&gt;&lt;IncludeInVSIX&gt;true&lt;/IncludeInVSIX&gt;&lt;/Content&gt;" />
     </ItemGroup>
   </Target>
 
   <Target Name="ProduceItemTemplateArtifacts" Outputs="%(ItemTemplate.Identity)" AfterTargets="PrepareForVsixBuild" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
+    <PropertyGroup>
+      <VsTemplateIcon Condition="'%(ItemTemplate.Icon)' != ''">%(ItemTemplate.Icon)</VsTemplateIcon>
+      <VsTemplateIcon Condition="'$(VsTemplateIcon)' == '' AND Exists('$(Icon)')">$(Icon)</VsTemplateIcon>
+      <VsTemplate>
+        <![CDATA[<VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="Item">
+  <TemplateData>
+    <Name>%(ItemTemplate.Name)</Name>
+    <Description>%(ItemTemplate.Description)</Description>
+    <TemplateID>%(ItemTemplate.Identity)</TemplateID>
+    <DefaultName>%(ItemTemplate.DefaultName)</DefaultName>
+    
+    <Icon>$(VsTemplateIcon)</Icon>
+    
+    <ProjectType>%(ItemTemplate.TemplateLanguage)</ProjectType>
+    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <SortOrder>5000</SortOrder>
+    <CreateNewFolder>true</CreateNewFolder>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <LocationField>Enabled</LocationField>
+    <EnableLocationBrowseButton>true</EnableLocationBrowseButton>
+  </TemplateData>
+  <TemplateContent>
+    <ProjectCollection/>
+    <CustomParameters>
+      <CustomParameter Name="$language$" Value="%(ItemTemplate.TemplateLanguage)" />
+      <CustomParameter Name="$uistyle$" Value="none"/>
+      <CustomParameter Name="$templateid$" Value="%(ItemTemplate.Identity)" />
+    </CustomParameters>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>Microsoft.VisualStudio.TemplateEngine.Wizard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</Assembly>
+    <FullClassName>Microsoft.VisualStudio.TemplateEngine.Wizard.TemplateEngineWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>
+]]>
+      </VsTemplate>
+      <DisplayName>%(ItemTemplate.Name)</DisplayName>
+    </PropertyGroup>
 
+    <MakeDir Condition="'$(DisplayName)' != ''" Directories="$(IntermediateOutputPath)\VsixBuild2\ItemTemplates\%(ItemTemplate.TemplateLanguage)\%(ItemTemplate.SelectionTreePath)\%(ItemTemplate.Identity)" />
+    <WriteLinesToFile Condition="'$(DisplayName)' != ''" File="$(IntermediateOutputPath)\VsixBuild2\ItemTemplates\%(ItemTemplate.TemplateLanguage)\%(ItemTemplate.SelectionTreePath)\%(ItemTemplate.Identity)\template.vstemplate" Lines="$(VsTemplate)" />
+    <Copy Condition="'$(DisplayName)' != '' AND Exists('$(VsTemplateIcon)')" SourceFiles="$(VsTemplateIcon)" DestinationFolder="$(IntermediateOutputPath)\VsixBuild2\ItemTemplates\%(ItemTemplate.TemplateLanguage)\%(ItemTemplate.SelectionTreePath)\%(ItemTemplate.Identity)" />
+    <ItemGroup Condition="'$(DisplayName)' != ''">
+      <TemplateReference Include="%20%20%20%20&lt;Asset Type=&quot;Microsoft.VisualStudio.ItemTemplate&quot; Path=&quot;ItemTemplates&quot; /&gt;" BaseDirectory="$(IntermediateOutputPath)\VsixBuild2\ItemTemplates\" />
+      <VsixItem Include="%20%20%20%20&lt;Content Include=&quot;ItemTemplates\%(ItemTemplate.TemplateLanguage)\%(ItemTemplate.SelectionTreePath)\%(ItemTemplate.Identity)\*&quot;&gt;&lt;CopyToOutputDirectory&gt;Always&lt;/CopyToOutputDirectory&gt;&lt;IncludeInVSIX&gt;true&lt;/IncludeInVSIX&gt;&lt;/Content&gt;" />
+    </ItemGroup>
   </Target>
 
   <Target Name="ProduceVsixManifest" AfterTargets="ProduceProjectTemplateArtifacts;ProduceItemTemplateArtifacts" BeforeTargets="UpdateClean" Condition="'$(IsGeneratedBuild)' != 'true'">
@@ -276,7 +455,6 @@
   </Assets>
 </PackageManifest>]]>
       </VsixManifest>
-<!-- Add @(TemplateReference) back inside Assets-->
     </PropertyGroup>
     <ProduceVstman TemplateEntries="@(ProjectTemplate)" TemplateKind="ProjectGroup" TemplateBaseDirectory="$(IntermediateOutputPath)\VsixBuild2\ProjectTemplates\" />
     <WriteLinesToFile File="$(IntermediateOutputPath)\VsixBuild2\Source.extension.vsixmanifest" Lines="$(VsixManifest)" />

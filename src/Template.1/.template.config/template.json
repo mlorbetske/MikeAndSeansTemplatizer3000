@@ -15,5 +15,10 @@
       }
     }
   },
+  "sources": [
+    {
+      "copyOnly": [ "Directory.Build.props", "Directory.Build.targets" ]
+    }
+  ],
   "primaryOutputs": [ { "path": "Template.1.csproj" } ]
 }
