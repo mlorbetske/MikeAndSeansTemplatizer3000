@@ -1,9 +1,7 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using TemplateData.Symbols;
 using TemplateReader.Utils;
 
@@ -67,10 +65,13 @@ namespace TemplateReader
                 Binding = symbol.ToString(nameof(GeneratedSymbolData.Binding)),
                 Replaces = symbol.ToString(nameof(GeneratedSymbolData.Replaces)),
                 Generator = symbol.ToString(nameof(GeneratedSymbolData.Generator)),
-                ReplacementContexts = ReadReplacementContexts(symbol)
+                ReplacementContexts = ReadReplacementContexts(symbol),
             };
 
-            symbolData.Parameters = MacroReader.ReadMacros(symbol);
+            if (symbolData.Type == GeneratedSymbolData.TypeName)
+            {
+                symbolData.MacroConfig = MacroReader.ReadMacro(symbol);
+            }
 
             return symbolData;
         }
@@ -96,11 +97,11 @@ namespace TemplateReader
 
             ReadBaseValueSymbolData(symbol, symbolData);
 
-            Dictionary<string, string> choicesAndDescriptions = new Dictionary<string, string>();
-            symbolData.ChoicesAndDescriptions = choicesAndDescriptions;
-
             if (String.Equals(symbolData.DataType, "choice", StringComparison.OrdinalIgnoreCase))
             {
+                Dictionary<string, string> choicesAndDescriptions = new Dictionary<string, string>();
+                symbolData.ChoicesAndDescriptions = choicesAndDescriptions;
+
                 foreach (JObject choiceObject in symbol.Items<JObject>("Choices"))
                 {
                     string choice = choiceObject.ToString("choice");
@@ -138,11 +139,7 @@ namespace TemplateReader
             if (!symbol.TryGetValue(nameof(BaseValueSymbolData.Forms), StringComparison.OrdinalIgnoreCase, out JToken formsToken) 
                     || !(formsToken is JObject formsObject))
             {
-                return new SymbolValueFormData()
-                {
-                    GlobalFormNames = new List<string>(),
-                    AddIdentityForm = true
-                };
+                return null;
             }
 
             JToken globalConfig = symbol.Property("global");
@@ -196,7 +193,8 @@ namespace TemplateReader
             }
             else
             {
-                return Empty<ReplacementContextData>.List.Value;
+                //return Empty<ReplacementContextData>.List.Value;
+                return null;
             }
         }
     }

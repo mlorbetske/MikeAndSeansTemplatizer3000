@@ -10,7 +10,12 @@ namespace TemplateData.Macros
 
         public string SourceVariable { get; set; }
 
-        // Regex -> Replacement
-        public IList<KeyValuePair<string, string>> Steps { get; set; }
+        public IReadOnlyList<RegexMacroStepData> Steps { get; set; }
+    }
+
+    public class RegexMacroStepData
+    {
+        public string Regex { get; set; }
+        public string Replacement { get; set; }
     }
 }

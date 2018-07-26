@@ -22,6 +22,7 @@ namespace TemplateData
         public string Identity { get; set; }
         public string Name { get; set; }
         public string SourceName { get; set; }
+        public bool PreferNameDirectory { get; set; }
         public string PlaceholderFilename { get; set; }
         public string GeneratorVersions { get; set; }
 

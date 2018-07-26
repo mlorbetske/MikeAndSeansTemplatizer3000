@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace TemplateData.ValueForms
 {
     public class ChainValueFormData : ValueFormData
     {
+        public const string FormName = "chain";
+
         public IReadOnlyList<string> Steps { get; set; }
     }
 }

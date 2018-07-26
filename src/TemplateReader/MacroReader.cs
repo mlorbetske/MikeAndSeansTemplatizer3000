@@ -1,6 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using TemplateData.Macros;
 using TemplateData.Symbols;
 using TemplateReader.Utils;
@@ -9,203 +8,225 @@ namespace TemplateReader
 {
     public static class MacroReader
     {
-        // reads macros on a generated symbol
-        public static IReadOnlyDictionary<string, BaseMacroData> ReadMacros(JObject symbol)
+        public static BaseMacroData ReadMacro(JObject symbol)
         {
-            IReadOnlyDictionary<string, JToken> rawParameters = symbol.ToJTokenDictionary(StringComparer.Ordinal, nameof(GeneratedSymbolData.Parameters));
-            Dictionary<string, BaseMacroData> macros = new Dictionary<string, BaseMacroData>();
+            JObject paramsObject = (JObject)symbol.Get<JToken>("parameters");
+            string generator = symbol.ToString(nameof(GeneratedSymbolData.Generator));
+            BaseMacroData macro = null;
 
-            foreach (KeyValuePair<string, JToken> paramNameAndInfo in rawParameters)
+            switch (generator)
             {
-                string macroType = paramNameAndInfo.Value.ToString(nameof(BaseMacroData.Type));
-                string variableName = paramNameAndInfo.Key;
-
-                switch (macroType)
-                {
-                    case CaseChangeMacroData.Identity:
-                        macros[variableName] = ReadCaseChangeMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case CoalesceMacroData.Identity:
-                        macros[variableName] = ReadCoalesceMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case ConstantMacroData.Identity:
-                        macros[variableName] = ReadConstantMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case EvaluateMacroData.Identity:
-                        macros[variableName] = ReadEvaluateMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case GeneratePortNumberMacroData.Identity:
-                        macros[variableName] = ReadGeneratePortNumberMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case GuidMacroData.Identity:
-                        macros[variableName] = ReadGuidMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case NowMacroData.Identity:
-                        macros[variableName] = ReadNowMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case ProcessValueFormMacroData.Identity:
-                        macros[variableName] = ReadProcessValueFormMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case RandomMacroData.Identity:
-                        macros[variableName] = ReadRandomMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case RegexMacroData.Identity:
-                        macros[variableName] = ReadRegexMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case RegexMatchMacroData.Identity:
-                        macros[variableName] = ReadRegexMatchMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    case SwitchMacroData.Identity:
-                        macros[variableName] = ReadSwitchMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                    default:
-                        macros[variableName] = ReadUnsupportedTypeMacroData(paramNameAndInfo.Value, variableName);
-                        break;
-                }
+                case CaseChangeMacroData.Identity:
+                    macro = ReadCaseChangeMacroData(paramsObject);
+                    break;
+                case CoalesceMacroData.Identity:
+                    macro = ReadCoalesceMacroData(paramsObject);
+                    break;
+                case ConstantMacroData.Identity:
+                    macro = ReadConstantMacroData(paramsObject);
+                    break;
+                case EvaluateMacroData.Identity:
+                    macro = ReadEvaluateMacroData(paramsObject);
+                    break;
+                case GeneratePortNumberMacroData.Identity:
+                    macro = ReadGeneratePortNumberMacroData(paramsObject);
+                    break;
+                case GuidMacroData.Identity:
+                    macro = ReadGuidMacroData(paramsObject);
+                    break;
+                case NowMacroData.Identity:
+                    macro = ReadNowMacroData(paramsObject);
+                    break;
+                case ProcessValueFormMacroData.Identity:
+                    macro = ReadProcessValueFormMacroData(paramsObject);
+                    break;
+                case RandomMacroData.Identity:
+                    macro = ReadRandomMacroData(paramsObject);
+                    break;
+                case RegexMacroData.Identity:
+                    macro = ReadRegexMacroData(paramsObject);
+                    break;
+                case RegexMatchMacroData.Identity:
+                    macro = ReadRegexMatchMacroData(paramsObject);
+                    break;
+                case SwitchMacroData.Identity:
+                    macro = ReadSwitchMacroData(paramsObject);
+                    break;
+                default:
+                    macro = ReadUnsupportedTypeMacroData(paramsObject, generator);
+                    break;
             }
 
-            return macros;
+            return macro;
         }
 
-        public static CaseChangeMacroData ReadCaseChangeMacroData(JToken sourceToken, string variableName)
+        public static CaseChangeMacroData ReadCaseChangeMacroData(JObject parameters)
         {
-            return new CaseChangeMacroData()
+            CaseChangeMacroData macroData = new CaseChangeMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                SourceVariable = sourceToken.ToString("source"),
-                ToLower = sourceToken.ToBool(nameof(CaseChangeMacroData.ToLower)),
+                SourceVariable = parameters.ToString(nameof(CaseChangeMacroData.SourceVariable)),
+                ToLower = parameters.ToBool(nameof(CaseChangeMacroData.ToLower))
             };
+
+            return macroData;
         }
 
-        public static CoalesceMacroData ReadCoalesceMacroData(JToken sourceToken, string variableName)
+        public static CoalesceMacroData ReadCoalesceMacroData(JObject parameters)
         {
-            return new CoalesceMacroData()
+            CoalesceMacroData macroData = new CoalesceMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                SourceVariableName = sourceToken.ToString(nameof(CoalesceMacroData.SourceVariableName)),
-                DefaultValue = sourceToken.ToString(nameof(CoalesceMacroData.DefaultValue)),
-                FallbackVariableName = sourceToken.ToString(nameof(CoalesceMacroData.FallbackVariableName))
+                SourceVariableName = parameters.ToString(nameof(CoalesceMacroData.SourceVariableName)),
+                DefaultValue = parameters.ToString(nameof(CoalesceMacroData.DefaultValue)),
+                FallbackVariableName = parameters.ToString(nameof(CoalesceMacroData.FallbackVariableName))
             };
+
+            return macroData;
         }
 
-        public static ConstantMacroData ReadConstantMacroData(JToken sourceToken, string variableName)
+        public static ConstantMacroData ReadConstantMacroData(JObject parameters)
         {
-            return new ConstantMacroData()
+            ConstantMacroData macroData = new ConstantMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                Value = sourceToken.ToString(nameof(ConstantMacroData.Value))
+                Value = parameters.ToString(nameof(ConstantMacroData.Value))
             };
+
+            return macroData;
         }
 
-        public static EvaluateMacroData ReadEvaluateMacroData(JToken sourceToken, string variableName)
+        public static EvaluateMacroData ReadEvaluateMacroData(JObject parameters)
         {
-            return new EvaluateMacroData()
+            EvaluateMacroData macroData = new EvaluateMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                Value = sourceToken.ToString(nameof(EvaluateMacroData.Value)),
-                Evaluator = sourceToken.ToString(nameof(EvaluateMacroData.Evaluator))
+                Value = parameters.ToString(nameof(EvaluateMacroData.Value)),
+                Evaluator = parameters.ToString(nameof(EvaluateMacroData.Evaluator))
             };
+
+            return macroData;
         }
 
-        public static GeneratePortNumberMacroData ReadGeneratePortNumberMacroData(JToken sourceToken, string variableName)
+        public static GeneratePortNumberMacroData ReadGeneratePortNumberMacroData(JObject parameters)
         {
-            return new GeneratePortNumberMacroData()
+            GeneratePortNumberMacroData macroData = new GeneratePortNumberMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                Low = sourceToken.ToInt32(nameof(GeneratePortNumberMacroData.Low)),
-                High = sourceToken.ToInt32(nameof(GeneratePortNumberMacroData.High))
+                Low = parameters.ToInt32(nameof(GeneratePortNumberMacroData.Low)),
+                High = parameters.ToInt32(nameof(GeneratePortNumberMacroData.High))
             };
+
+            return macroData;
         }
 
-        public static GuidMacroData ReadGuidMacroData(JToken sourceToken, string variableName)
+        public static GuidMacroData ReadGuidMacroData(JObject parameters)
         {
-            return new GuidMacroData()
+            GuidMacroData macroData = new GuidMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                Format = sourceToken.ToString(nameof(GuidMacroData.Format))
+                Format = parameters.ToString(nameof(GuidMacroData.Format))
             };
+
+            return macroData;
         }
 
-        public static NowMacroData ReadNowMacroData(JToken sourceToken, string variableName)
+        public static NowMacroData ReadNowMacroData(JObject parameters)
         {
-            return new NowMacroData()
+            NowMacroData macroData = new NowMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                Format = sourceToken.ToString(nameof(NowMacroData.Format)),
-                Utc = sourceToken.ToBool(nameof(NowMacroData.Utc))
+                Format = parameters.ToString(nameof(NowMacroData.Format)),
+                Utc = parameters.ToBool(nameof(NowMacroData.Utc))
             };
+
+            return macroData;
         }
 
-        public static ProcessValueFormMacroData ReadProcessValueFormMacroData(JToken sourceToken, string variableName)
+        public static ProcessValueFormMacroData ReadProcessValueFormMacroData(JObject parameters)
         {
-            return new ProcessValueFormMacroData()
+            ProcessValueFormMacroData macroData = new ProcessValueFormMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                SourceVariable = sourceToken.ToString(nameof(ProcessValueFormMacroData.SourceVariable)),
-                FormName = sourceToken.ToString(nameof(ProcessValueFormMacroData.FormName)),
+                SourceVariable = parameters.ToString(nameof(ProcessValueFormMacroData.SourceVariable)),
+                FormName = parameters.ToString(nameof(ProcessValueFormMacroData.FormName))
             };
+
+            return macroData;
         }
 
-        public static RandomMacroData ReadRandomMacroData(JToken sourceToken, string variableName)
+        public static RandomMacroData ReadRandomMacroData(JObject parameters)
         {
-            return new RandomMacroData()
+            RandomMacroData macroData = new RandomMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                Low = sourceToken.ToInt32(nameof(RandomMacroData.Low)),
-                High = sourceToken.ToInt32(nameof(RandomMacroData.High))
+                Low = parameters.ToInt32(nameof(RandomMacroData.Low)),
+                High = parameters.ToInt32(nameof(RandomMacroData.High))
             };
+
+            return macroData;
         }
 
-        public static RegexMacroData ReadRegexMacroData(JToken sourceToken, string variableName)
+        public static RegexMacroData ReadRegexMacroData(JObject parameters)
         {
-            return new RegexMacroData()
+            List<RegexMacroStepData> stepList = new List<RegexMacroStepData>();
+
+            JToken stepsParam = parameters.Get<JToken>(nameof(RegexMacroData.Steps));
+            foreach (JToken entry in (JArray)stepsParam)
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                SourceVariable = sourceToken.ToString(nameof(RegexMacroData.SourceVariable)),
-                Steps = sourceToken.ToStringStringKeyValuePairList(nameof(RegexMacroData.Steps)),
+                JObject map = (JObject)entry;
+                RegexMacroStepData step = new RegexMacroStepData()
+                {
+                    Regex = map.ToString(nameof(RegexMacroStepData.Regex)),
+                    Replacement = map.ToString(nameof(RegexMacroStepData.Replacement))
+                };
+                stepList.Add(step);
+            }
+
+            RegexMacroData macroData = new RegexMacroData()
+            {
+                SourceVariable = parameters.ToString(nameof(RegexMacroData.SourceVariable)),
+                Steps = stepList
             };
+
+            return macroData;
         }
 
-        public static RegexMatchMacroData ReadRegexMatchMacroData(JToken sourceToken, string variableName)
+        public static RegexMatchMacroData ReadRegexMatchMacroData(JObject parameters)
         {
-            return new RegexMatchMacroData()
+            RegexMatchMacroData macroData = new RegexMatchMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                SourceVariable = sourceToken.ToString(nameof(RegexMatchMacroData.SourceVariable)),
-                Pattern = sourceToken.ToString(nameof(RegexMatchMacroData.Pattern))
+                SourceVariable = parameters.ToString(nameof(RegexMatchMacroData.SourceVariable)),
+                Pattern = parameters.ToString(nameof(RegexMatchMacroData.Pattern))
             };
+
+            return macroData;
         }
 
-        public static SwitchMacroData ReadSwitchMacroData(JToken sourceToken, string variableName)
+        public static SwitchMacroData ReadSwitchMacroData(JObject parameters)
         {
-            return new SwitchMacroData()
+            List<SwitchMacroSwitchesData> switchList = new List<SwitchMacroSwitchesData>();
+
+            JToken switchesParam = parameters.Get<JToken>(nameof(SwitchMacroData.Switches));
+            foreach (JToken entry in (JArray)switchesParam)
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                Switches = sourceToken.ToStringStringKeyValuePairList(nameof(SwitchMacroData.Switches))
+                JObject map = (JObject)entry;
+                SwitchMacroSwitchesData switchEntry = new SwitchMacroSwitchesData()
+                {
+                    Condition = map.ToString(nameof(SwitchMacroSwitchesData.Condition)),
+                    Value = map.ToString(nameof(SwitchMacroSwitchesData.Value))
+                };
+                switchList.Add(switchEntry);
+            }
+
+            SwitchMacroData macroData = new SwitchMacroData()
+            {
+                Switches = switchList
             };
+
+            return macroData;
         }
 
-        public static UnsupportedTypeMacroData ReadUnsupportedTypeMacroData(JToken sourceToken, string variableName)
+        public static UnsupportedTypeMacroData ReadUnsupportedTypeMacroData(JObject parameters, string generator)
         {
-            return new UnsupportedTypeMacroData()
+            UnsupportedTypeMacroData macroData = new UnsupportedTypeMacroData()
             {
-                VariableName = variableName,
-                DataType = sourceToken.ToString(nameof(BaseMacroData.DataType)),
-                SpecifiedType = sourceToken.ToString(nameof(BaseMacroData.Type)),
-                RawConfig = sourceToken.ToString()
+                SpecifiedType = generator,
+                RawConfig = parameters.ToString()
             };
+
+            return macroData;
         }
     }
 }

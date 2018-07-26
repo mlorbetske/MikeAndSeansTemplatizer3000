@@ -189,23 +189,6 @@ namespace TemplateReader.Utils
             return result;
         }
 
-        public static List<KeyValuePair<string, string>> ToStringStringKeyValuePairList(this JToken token, string propertyName = null)
-        {
-            List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
-
-            foreach(JProperty property in token.PropertiesOf(propertyName))
-            {
-                if (property.Value == null || property.Value.Type != JTokenType.String)
-                {
-                    continue;
-                }
-
-                result.Add(new KeyValuePair<string, string>(property.Name, property.Value.ToString()));
-            }
-
-            return result;
-        }
-
         // reads a dictionary whose values can either be string literals, or arrays of strings.
         public static IReadOnlyDictionary<string, IReadOnlyList<string>> ToStringListDictionary(this JToken token, StringComparer comparer = null, string propertyName = null)
         {
@@ -231,9 +214,9 @@ namespace TemplateReader.Utils
         }
 
         // Leaves the values as JTokens.
-        public static IReadOnlyDictionary<string, JToken> ToJTokenDictionary(this JToken token, StringComparer comparaer = null, string propertyName = null)
+        public static IReadOnlyDictionary<string, JToken> ToJTokenDictionary(this JToken token, StringComparer comparer = null, string propertyName = null)
         {
-            Dictionary<string, JToken> result = new Dictionary<string, JToken>(comparaer ?? StringComparer.Ordinal);
+            Dictionary<string, JToken> result = new Dictionary<string, JToken>(comparer ?? StringComparer.Ordinal);
 
             foreach (JProperty property in token.PropertiesOf(propertyName))
             {
@@ -243,7 +226,7 @@ namespace TemplateReader.Utils
             return result;
         }
 
-        public static IReadOnlyList<string> ArrayAsStrings(this JToken token, string propertyName = null)
+        public static IReadOnlyList<string> ArrayAsStrings(this JToken token, string propertyName = null, bool defaultAsNull = false)
         {
             if (propertyName != null)
             {
@@ -254,6 +237,10 @@ namespace TemplateReader.Utils
 
             if (arr == null)
             {
+                if (defaultAsNull)
+                {
+                    return null;
+                }
                 return Empty<string>.List.Value;
             }
 

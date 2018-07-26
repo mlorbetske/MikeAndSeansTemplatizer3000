@@ -1,9 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using TemplateData.ValueForms;
 using TemplateReader.Utils;
 
@@ -20,9 +17,9 @@ namespace TemplateReader
             foreach (KeyValuePair<string, JToken> formNameAndData in formsSource)
             {
                 string identifier = formNameAndData.Value.ToString(nameof(ValueFormData.Identifier));
-                string name = formNameAndData.Value.ToString(nameof(ValueFormData.Name));
+                string name = formNameAndData.Key;
 
-                if (identifier == "chain")
+                if (string.Equals(identifier, ChainValueFormData.FormName, StringComparison.OrdinalIgnoreCase))
                 {
                     ChainValueFormData formData = new ChainValueFormData()
                     {
@@ -32,7 +29,7 @@ namespace TemplateReader
                     };
                     valueFormsData[name] = formData;
                 }
-                else if (identifier == "replace")
+                else if (string.Equals(identifier, ReplacementValueFormData.FormName, StringComparison.OrdinalIgnoreCase))
                 {
                     string pattern = formNameAndData.Value.ToString(nameof(ReplacementValueFormData.Pattern));
                     ReplacementValueFormData formData = new ReplacementValueFormData()
@@ -46,10 +43,11 @@ namespace TemplateReader
                 }
                 else
                 {
-                    ValueFormData formData = new ValueFormData()
+                    UnsupportedTypeValueFormData formData = new UnsupportedTypeValueFormData()
                     {
                         Identifier = identifier,
-                        Name = name
+                        Name = name,
+                        RawConfig = formNameAndData.Value.ToString()
                     };
                     valueFormsData[name] = formData;
                 }

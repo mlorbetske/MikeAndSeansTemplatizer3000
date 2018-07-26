@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CustomFileGlobReader.cs" />
     <Compile Include="MacroReader.cs" />
     <Compile Include="SymbolReader.cs" />
     <Compile Include="TemplateReader.cs" />

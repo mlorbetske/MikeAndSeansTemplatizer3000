@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TemplateData", "src\Templat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TemplateReader", "src\TemplateReader\TemplateReader.csproj", "{FC19A3F9-387F-40BF-B929-476F291F306C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TemplateReaderAdHocTesting", "test\TemplateReaderAdHocTesting\TemplateReaderAdHocTesting.csproj", "{0F2145E8-805E-4E6F-8102-7186D3DB1413}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,6 +75,18 @@ Global
 		{FC19A3F9-387F-40BF-B929-476F291F306C}.Release|x64.Build.0 = Release|Any CPU
 		{FC19A3F9-387F-40BF-B929-476F291F306C}.Release|x86.ActiveCfg = Release|Any CPU
 		{FC19A3F9-387F-40BF-B929-476F291F306C}.Release|x86.Build.0 = Release|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Debug|x64.Build.0 = Debug|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Debug|x86.Build.0 = Debug|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Release|x64.ActiveCfg = Release|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Release|x64.Build.0 = Release|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Release|x86.ActiveCfg = Release|Any CPU
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,6 +96,7 @@ Global
 		{9DA5368C-4CC4-4088-8F98-E1A1549D0B59} = {F5FD852A-72EB-4C6B-99EE-327A315D185C}
 		{F2C477F8-2B29-4AAE-AE24-0C5A0FE6FB4B} = {F5FD852A-72EB-4C6B-99EE-327A315D185C}
 		{FC19A3F9-387F-40BF-B929-476F291F306C} = {F5FD852A-72EB-4C6B-99EE-327A315D185C}
+		{0F2145E8-805E-4E6F-8102-7186D3DB1413} = {6EF523E6-8785-4E1F-9E6F-9587FBBAEDEA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {269B01F8-9790-47DA-BF87-BA0C6D619FF8}

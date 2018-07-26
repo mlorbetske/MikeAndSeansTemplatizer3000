@@ -1,16 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using TemplateData;
 using TemplateData.BaseLines;
 using TemplateData.PostActions;
 using TemplateData.PrimaryOutputs;
 using TemplateData.Sources;
-using TemplateData.Symbols;
-using TemplateData.ValueForms;
 using TemplateReader.Utils;
 
 namespace TemplateReader
@@ -24,22 +18,15 @@ namespace TemplateReader
             ReadBasicConfigData(source, configData);
 
             configData.Forms = ValueFormReader.ReadValueForms(source);
-
             configData.Sources = ReadSources(source);
-
             configData.BaselineInfo = ReadBaselines(source);
-
             configData.Tags = source.ToStringDictionary(StringComparer.OrdinalIgnoreCase, nameof(TemplateData.TemplateData.Tags));
-
             configData.Symbols = SymbolReader.ReadSymbols(source);
-
             configData.PostActions = ReadPostActions(source);
-
             configData.PrimaryOutputs = ReadPrimaryOutputs(source);
+            configData.CustomOperations = CustomFileGlobReader.ReadCustomFileGlobData(source.Get<JObject>("CustomOperations"), string.Empty);
+            configData.GlobSpecificCustomOperations = CustomFileGlobReader.ReadGlobSpecificCustomOperations(source);
 
-            // TODO: CustomOperations && GlobSpecificCustomOperations
-
-            throw new NotImplementedException("// TODO: CustomOperations && GlobSpecificCustomOperations");
             return configData;
         }
 
@@ -55,6 +42,7 @@ namespace TemplateReader
             configData.Identity = source.ToString(nameof(configData.Identity));
             configData.Name = source.ToString(nameof(configData.Name));
             configData.SourceName = source.ToString(nameof(configData.SourceName));
+            configData.PreferNameDirectory = source.ToBool(nameof(configData.PreferNameDirectory));
             configData.PlaceholderFilename = source.ToString(nameof(configData.PlaceholderFilename));
             configData.GeneratorVersions = source.ToString(nameof(configData.GeneratorVersions));
 
@@ -94,13 +82,13 @@ namespace TemplateReader
             SourceModifierData sourceModifierData = new SourceModifierData()
             {
                 Condition = source.ToString(nameof(SourceModifierData.Condition)),
-                CopyOnlyGlobs = source.Get<JToken>(nameof(SourceModifierData.CopyOnlyGlobs))
-                                        .JTokenStringOrArrayToCollection(new List<string>()),
-                IncludeGlobs = source.Get<JToken>(nameof(SourceModifierData.IncludeGlobs))
-                                        .JTokenStringOrArrayToCollection(new List<string>()),
-                ExcludeGlobs = source.Get<JToken>(nameof(SourceModifierData.ExcludeGlobs))
-                                        .JTokenStringOrArrayToCollection(new List<string>()),
-                RenamePatterns = source.Get<JToken>(nameof(SourceModifierData.RenamePatterns))
+                CopyOnly = source.Get<JToken>(nameof(SourceModifierData.CopyOnly))
+                                        .JTokenStringOrArrayToCollection(null),
+                Include = source.Get<JToken>(nameof(SourceModifierData.Include))
+                                        .JTokenStringOrArrayToCollection(null),
+                Exclude = source.Get<JToken>(nameof(SourceModifierData.Exclude))
+                                        .JTokenStringOrArrayToCollection(null),
+                Rename = source.Get<JToken>(nameof(SourceModifierData.Rename))
                                         .ToStringDictionary()
             };
 

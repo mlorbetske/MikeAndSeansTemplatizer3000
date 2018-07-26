@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TemplateData.ValueForms
+﻿namespace TemplateData.ValueForms
 {
     public class ReplacementValueFormData : ValueFormData
     {
+        public const string FormName = "replace";
+
         // The regex to match
         public string Pattern { get; set; }
 

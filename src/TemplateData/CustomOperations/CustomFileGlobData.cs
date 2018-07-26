@@ -8,7 +8,7 @@ namespace TemplateData.CustomOperations
 
         public IReadOnlyList<CustomOperationData> Operations { get; set; }
 
-        public VariableConfigData DataFormat { get; set; }
+        public VariableConfigData VariableFormat { get; set; }
 
         public string FlagPrefix { get; set; }
     }

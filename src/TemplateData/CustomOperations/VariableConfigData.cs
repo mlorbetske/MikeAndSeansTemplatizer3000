@@ -4,9 +4,7 @@ namespace TemplateData.CustomOperations
 {
     public class VariableConfigData
     {
-        public IReadOnlyDictionary<string, string> Sources { get; set; }
-
-        public IReadOnlyList<string> Order { get; set; }
+        public IReadOnlyList<VariableConfigSource> Sources { get; set; }
 
         public string FallbackFormat { get; set; }
 

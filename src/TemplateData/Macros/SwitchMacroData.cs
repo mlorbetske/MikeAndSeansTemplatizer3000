@@ -8,7 +8,12 @@ namespace TemplateData.Macros
 
         public override string Type => Identity;
 
-        // condition -> value
-        public IList<KeyValuePair<string, string>> Switches { get; set; }
+        public IReadOnlyList<SwitchMacroSwitchesData> Switches { get; set; }
+    }
+
+    public class SwitchMacroSwitchesData
+    {
+        public string Condition { get; set; }
+        public string Value { get; set; }
     }
 }

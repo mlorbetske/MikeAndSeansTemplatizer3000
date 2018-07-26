@@ -15,7 +15,8 @@ namespace TemplateData.Symbols
 
         public string Generator { get; set; }
 
-        public IReadOnlyDictionary<string, BaseMacroData> Parameters { get; set; }
+        //public IReadOnlyDictionary<string, BaseMacroData> Parameters { get; set; }
+        public BaseMacroData MacroConfig { get; set; }
 
         public IReadOnlyList<ReplacementContextData> ReplacementContexts { get; set; }
     }
